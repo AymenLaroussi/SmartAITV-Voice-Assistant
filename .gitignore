@@ -19,3 +19,6 @@ Thumbs.db
 *.log
 *.db
 *.sqlite3
+
+# Personal Info
+cookies.json

@@ -9,6 +9,17 @@ This project aims to create a personalized Smart TV alternative solution using P
     ```
     pip install PyQtWebEngine
     ```
+   
+## Features
+- **Multi-tab Browsing:** Explore multiple websites simultaneously.
+- **Cookie Management:** Set cookies for specific web sessions.
+- **Custom User Agent:** Set a custom user agent for browsing.
+- **Full-Screen Mode:** Enhance the viewing experience with fullscreen
+
+## Requirements
+- Python 3.x
+- PyQt5
+- PyQtWebEngine
 
 ## Usage
 1. Clone or download this repository.

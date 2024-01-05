@@ -4,6 +4,7 @@ import sys
 import threading
 import time
 
+import pyttsx3
 from PyQt5.QtCore import *
 from PyQt5.QtGui import QIcon
 from PyQt5.QtNetwork import QNetworkCookie
@@ -11,6 +12,7 @@ from PyQt5.QtWebEngineWidgets import *
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget
 from dotenv import load_dotenv
 import speech_recognition as sr
+from gpt4all import GPT4All
 
 # Load variables from .env file into environment
 load_dotenv()
@@ -24,6 +26,10 @@ ALEX_WAKE_WORD = "alex"
 listening_for_wake_word = True
 # Flag to activate when calling for Alex
 alex_engine = True
+# Initialize the text-to-speech engine
+alex = pyttsx3.init()
+# Initialize the GPT-4 model using the provided model path and disable download
+model = GPT4All(os.getenv("ModelPath"), allow_download=False)
 
 
 class SmartTVBuilder(QMainWindow):
@@ -111,11 +117,13 @@ def listen_for_wake_word(audio):
         try:
             # Attempting to recognize speech from the audio
             result = r.recognize_google(audio_data)
-            print("🤖 Alex : "+result+", It's not my name 🙉", result)
+            print("🤖 Alex : " + result + ", It's not my name 🙉")
             text_input = result.lower().strip()
 
             # Checking if the wake word is detected in the speech input
             if ALEX_WAKE_WORD in text_input:
+                sayIt('🤖 Alex : 🫖 What can i help sir ?')
+                ask_Alex()
                 listening_for_wake_word = False  # Stop listening for the wake word
         except sr.UnknownValueError:
             print("🤖 Alex : Call me by my name 🙈")
@@ -128,17 +136,19 @@ def callback(r, audio):
     global listening_for_wake_word
     global alex_engine
 
-    # If currently listening for the wake word, process the audio
+    # Check if currently listening for the wake word, then process the audio
     if listening_for_wake_word:
         listen_for_wake_word(audio)
-
+    # If not listening for the wake word, invoke the assistant
+    elif alex_engine == False:
+        ask_Alex()
 
 # Start listening for the wake word
 def start_listening():
     # Adjust microphone for ambient noise and prompt user to say the wake word
     with source as s:
         r.adjust_for_ambient_noise(s, duration=2)
-    print('🤖 Alex : Say The Magic Word!')
+    print('🤖 Alex : Say The Magic Word! 🪄')
 
     # Listen in the background and process audio using the callback function
     r.listen_in_background(source, callback)
@@ -146,6 +156,39 @@ def start_listening():
     # Continuously run to keep the background listening active
     while True:
         time.sleep(1)
+
+# Function to speak out the provided text
+def sayIt(output):
+    alex.say(output)
+    alex.runAndWait()
+
+# Function to interact with the assistant
+def ask_Alex():
+    global listening_for_wake_word
+    global alex_engine
+
+    while True:
+        with sr.Microphone() as source:
+            print("🤖 Alex : 👂 Listening...")
+            r.adjust_for_ambient_noise(source)
+            audio = r.listen(source)
+
+            try:
+                print("🤖 Alex : 🔎 Recognizing...")
+                # Recognize the command from the audio input
+                command = r.recognize_google(audio)
+                print("🥷🏼 You :", command)
+
+                # Generate a response using the GPT-4 model based on the command
+                output = model.generate(command, max_tokens=200)
+                # Speak out the generated response
+                sayIt(output)
+                print('🤖 Alex : ', output)
+                listening_for_wake_word = True
+            except sr.UnknownValueError:
+                print("🤖 Alex : I didn't get that.")
+            except sr.RequestError:
+                print("🤖 Alex : Bad connexion.")
 
 
 if __name__ == '__main__':

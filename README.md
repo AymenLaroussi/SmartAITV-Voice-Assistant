@@ -5,11 +5,26 @@ This project aims to create a personalized Smart TV alternative solution using P
 
 ## Installation
 1. Ensure you have Python installed. If not, download and install it from [Python's official website](https://www.python.org/).
-2. Install the required package `PyQtWebEngine`:
+2. Install the required package 
+
+`PyQtWebEngine`:
     ```
     pip install PyQtWebEngine
     ```
-   
+ `Speech_Recognition`:
+    ```
+    pip install SpeechRecognition
+    ```
+ `setuptools`:
+    ```
+    pip install setuptools
+    ```
+
+`requirements.txt`:
+    ```
+    pip freeze > requirements.txt
+    ```
+
 ## Features
 - **Multi-tab Browsing:** Explore multiple websites simultaneously.
 - **Cookie Management:** Set cookies for specific web sessions.
@@ -31,6 +46,12 @@ This project aims to create a personalized Smart TV alternative solution using P
 - Python 3.x
 - PyQt5
 - PyQtWebEngine
+- PyAudio
+- setuptools
+- SpeechRecognition
+- tqdm
+- typing_extensions
+- urllib3
 
 ## License
 This project is licensed under the [MIT License](LICENSE).

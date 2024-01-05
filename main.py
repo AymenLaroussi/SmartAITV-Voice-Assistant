@@ -1,15 +1,29 @@
 import json
 import os
 import sys
+import threading
+import time
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import QIcon
 from PyQt5.QtNetwork import QNetworkCookie
 from PyQt5.QtWebEngineWidgets import *
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget
 from dotenv import load_dotenv
+import speech_recognition as sr
 
 # Load variables from .env file into environment
 load_dotenv()
+# Initialize Recognizer
+r = sr.Recognizer()
+# Set up a microphone source to listen for voice input
+source = sr.Microphone()
+# Define the wake word for the voice assistant
+ALEX_WAKE_WORD = "alex"
+# Flag to determine if the system is actively listening for the wake word
+listening_for_wake_word = True
+# Flag to activate when calling for Alex
+alex_engine = True
 
 
 class SmartTVBuilder(QMainWindow):
@@ -31,7 +45,7 @@ class SmartTVBuilder(QMainWindow):
         browser.load(QUrl(url))  # Loading the provided URL for exploration
         browser.urlChanged.connect(self.track_URL)  # Monitoring the digital pathways
         browser.page().fullScreenRequested.connect(self.enable_fullscreen)  # Activating immersive mode
-        self.tab_widget.addTab(browser, "Experimental Browser")  # Integrating the browser for investigation
+        self.tab_widget.addTab(browser, "YouTube")  # Integrating the browser for investigation
         self.tab_widget.tabBar().hide()  # Hiding tabs for workspace organization
 
     def create_Netflix_tab(self, url):
@@ -40,7 +54,7 @@ class SmartTVBuilder(QMainWindow):
         # Create a cookie store
         cookie_store = web.page().profile().cookieStore()  # Access the cookie store for the web page
         with open("cookies.json", 'r') as file:
-            Netflix_cookies = json.load(file) # Load data from cookies.json file
+            Netflix_cookies = json.load(file)  # Load data from cookies.json file
         # Set each cookie in the cookie store
         for cookie in Netflix_cookies:
             qcookie = QNetworkCookie()  # Create a QNetworkCookie object for each cookie
@@ -57,7 +71,6 @@ class SmartTVBuilder(QMainWindow):
         # Load the URL with the set cookies
         web.load(QUrl(url))  # Load the specified URL in the web view
         self.tab_widget.addTab(web, "Netflix")  # Add the web view to the tab widget for Netflix
-        self.tab_widget.setStyleSheet("QTabBar::tab { width: 0; margin: -1; padding: 0; border: none; }")
 
         # Function to print the current URL when the page finishes loading
         def print_current_url():
@@ -83,10 +96,65 @@ class SmartTVBuilder(QMainWindow):
         request.accept()  # Accepting the request for an expanded view
 
 
+# Method to process the audio input and detect the wake word
+def listen_for_wake_word(audio):
+    global listening_for_wake_word
+    global alex_engine
+
+    # Saving the received audio data to a file for analysis
+    with open("wake_detect.wav", "wb") as f:
+        f.write(audio.get_wav_data())
+
+    # Using SpeechRecognition to process the audio file
+    with sr.AudioFile('wake_detect.wav') as source:
+        audio_data = r.record(source)
+        try:
+            # Attempting to recognize speech from the audio
+            result = r.recognize_google(audio_data)
+            print("🤖 Alex : "+result+", It's not my name 🙉", result)
+            text_input = result.lower().strip()
+
+            # Checking if the wake word is detected in the speech input
+            if ALEX_WAKE_WORD in text_input:
+                listening_for_wake_word = False  # Stop listening for the wake word
+        except sr.UnknownValueError:
+            print("🤖 Alex : Call me by my name 🙈")
+        except sr.RequestError as e:
+            print("❌ Error occurred; {e}")
+
+
+# Callback function to process audio in the background
+def callback(r, audio):
+    global listening_for_wake_word
+    global alex_engine
+
+    # If currently listening for the wake word, process the audio
+    if listening_for_wake_word:
+        listen_for_wake_word(audio)
+
+
+# Start listening for the wake word
+def start_listening():
+    # Adjust microphone for ambient noise and prompt user to say the wake word
+    with source as s:
+        r.adjust_for_ambient_noise(s, duration=2)
+    print('🤖 Alex : Say The Magic Word!')
+
+    # Listen in the background and process audio using the callback function
+    r.listen_in_background(source, callback)
+
+    # Continuously run to keep the background listening active
+    while True:
+        time.sleep(1)
+
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     app_icon = QIcon('assets/icon.png')  # Symbolizing the workspace for professional representation
     smart_tv = SmartTVBuilder()  # Building a customized Smart TV solution
     smart_tv.tab_widget.tabBar().setVisible(True)
     smart_tv.show()  # Displaying the workspace for solution development
+    command_thread = threading.Thread(target=start_listening)  # Create a thread to run the start_listening()
+    command_thread.daemon = True  # Set the thread as a daemon to allow it to exit when the main program ends
+    command_thread.start()  # Start the thread to listen for the wake word
     sys.exit(app.exec_())  # Managing the event loop for continuous development
